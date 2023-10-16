@@ -1,18 +1,18 @@
 import requests
+from collections import defaultdict
 
 
 def get_data_from_api(run_id):
-    # Endpoint URL
-    url = f"https://api.green-coding.berlin/v1/phase_stats/single/{run_id}"
-
-    # Request data from the API
-    response = requests.get(url)
-    data = response.json()["data"]
-
-    # Define the keys to extract
-    phases = ["[BASELINE]", "[INSTALLATION]", "[BOOT]", "[IDLE]", "[RUNTIME]", "[REMOVE]"]
-
-    components = [
+    API_ENDPOINT = f"https://api.green-coding.berlin/v1/phase_stats/single/{run_id}"
+    PHASES = [
+        "[BASELINE]",
+        "[INSTALLATION]",
+        "[BOOT]",
+        "[IDLE]",
+        "[RUNTIME]",
+        "[REMOVE]",
+    ]
+    COMPONENTS = [
         "phase_time_syscall_system",
         "psu_co2_ac_mcp_machine",
         "network_energy_formula_global",
@@ -20,31 +20,47 @@ def get_data_from_api(run_id):
         "psu_energy_ac_mcp_machine",
     ]
 
-    # Extract and print the relevant information
-    extracted_data = {}
-    for phase in phases:
-        extracted_data[phase] = {}
-        for component in components:
-            try:
-                component_data = data["data"][phase][component]
-            except KeyError:
+    try:
+        response = requests.get(API_ENDPOINT)
+        response.raise_for_status()  # This will raise an exception if the request is unsuccessful
+        all_data = response.json()["data"]
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+        return (
+            {}
+        )  # or handle the error in a way that's appropriate for your application
+
+    extracted_data = defaultdict(lambda: defaultdict(dict))
+    for phase in PHASES:
+        for component in COMPONENTS:
+            component_data = all_data.get("data", {}).get(phase, {}).get(component)
+
+            if component_data:
+                component_info = {
+                    "type": component_data.get("type"),
+                    "unit": component_data.get("unit"),
+                    # Extracting mean value might be more complex based on the data structure; this is a simplified approach
+                    "value": next(
+                        iter(component_data.get("data", {}).values()), {}
+                    ).get("mean"),
+                }
+                extracted_data[phase][component] = component_info
+            else:
                 extracted_data[phase][component] = {"error": "No data available"}
-            component_type = component_data["type"]
-            component_unit = component_data["unit"]
-
-            for package, package_data in component_data["data"].items():
-                for mean_data in package_data["data"].values():
-                    mean_value = mean_data["mean"]
-
-                    extracted_data[phase][component] = {
-                        "type": component_type,
-                        "unit": component_unit,
-                        "value": mean_value,
-                    }
 
     return extracted_data
 
 
-run_id = ""  # Replace this with your actual run_id
-result = get_data_from_api(run_id)
-print(result)
+def main():
+    # Use your actual run_id
+    run_id = ""
+    result = get_data_from_api(run_id)
+
+    # Pretty print the result
+    import json
+
+    print(json.dumps(result, indent=4))
+
+
+if __name__ == "__main__":
+    main()
