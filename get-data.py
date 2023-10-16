@@ -2,6 +2,16 @@ import requests
 from collections import defaultdict
 
 
+def liter_of_galosine_consumed(co2_emissions: float) -> float:
+    """Returns the amount of gasoline consumed in liters based on the amount of CO2 emissions in kg"""
+    # Source: https://www.epa.gov/energy/greenhouse-gas-equivalencies-calculator
+    return (co2_emissions / 8.89e-3) * 3.79
+
+# def kilometers_driven_by_car(co2_emissions: float) -> float:
+#     """Returns the distance driven by a car in kilometers based on the amount of CO2 emissions in kg"""
+#     # Source: https://www.epa.gov/energy/greenhouse-gas-equivalencies-calculator
+#     return 3.90e-4 * co2_emissions 
+
 def get_data_from_api(run_id):
     API_ENDPOINT = f"https://api.green-coding.berlin/v1/phase_stats/single/{run_id}"
     PHASES = [
